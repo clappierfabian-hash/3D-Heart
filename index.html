@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Das menschliche Herz – Außenansicht & Querschnitt</title>
+<style>
+  :root{
+    --rot:#d23b4e; --blau:#4a6aa8;
+    --bg1:#070b16; --bg2:#141b30; --panel:rgba(14,19,36,.88); --text:#eef2ff; --muted:#aab3d0;
+    --cream:#f6f2ec;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; width:100%; overflow:hidden;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; color:var(--text);
+    background:radial-gradient(130% 130% at 50% 0%, var(--bg2), var(--bg1) 55%, #03050c);
+    -webkit-tap-highlight-color:transparent; }
+
+  header{ position:fixed; top:0; left:0; right:0; z-index:20; padding:12px 16px 26px;
+    background:linear-gradient(180deg, rgba(3,5,12,.85), rgba(3,5,12,0)); pointer-events:none; }
+  header h1{ margin:0; font-size:17px; font-weight:700; }
+  header p{ margin:3px 0 0; font-size:12px; color:var(--muted); }
+
+  /* Ansicht-Umschalter */
+  #switch{ position:fixed; top:10px; left:50%; transform:translateX(-50%); z-index:25; display:flex;
+    background:var(--panel); border:1px solid rgba(255,255,255,.16); border-radius:30px; padding:4px; gap:4px;
+    backdrop-filter:blur(8px); }
+  #switch button{ appearance:none; border:none; cursor:pointer; color:var(--muted); background:none;
+    font-size:13px; font-weight:700; padding:8px 16px; border-radius:24px; }
+  #switch button.active{ background:linear-gradient(135deg,var(--rot),#962536); color:#fff; }
+
+  /* ---- 3D Ansicht ---- */
+  #view3d{ position:fixed; inset:0; }
+  #scene{ position:fixed; inset:0; touch-action:none; }
+  #ctrl3d{ position:fixed; left:16px; top:78px; z-index:15; width:226px; display:flex; flex-direction:column; gap:9px;
+    background:linear-gradient(180deg, rgba(22,29,52,.92), rgba(14,19,36,.92)); border:1px solid rgba(255,255,255,.16);
+    border-radius:16px; padding:14px; backdrop-filter:blur(10px); box-shadow:0 14px 40px rgba(0,0,0,.5); }
+  #ctrl3d .panelTitle{ font-size:12px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:#aab3d0; margin:0 2px 2px; }
+  .bigbtn{ appearance:none; border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.06); color:#fff;
+    font-size:14.5px; font-weight:700; padding:12px 14px; border-radius:12px; cursor:pointer; text-align:left;
+    display:flex; align-items:center; gap:10px; transition:background .12s, border-color .12s, transform .08s; }
+  .bigbtn:hover{ background:rgba(255,255,255,.12); border-color:rgba(255,255,255,.3); }
+  .bigbtn:active{ transform:scale(.98); }
+  .bigbtn.ghost{ background:none; color:#cdd5f0; font-weight:600; justify-content:center; }
+  .bigbtn .led{ width:11px; height:11px; border-radius:50%; background:#5fd07a; flex:0 0 auto; box-shadow:0 0 8px rgba(95,208,122,.7); }
+  .bigbtn.off .led{ background:#6a7390; box-shadow:none; }
+  .bpmRow{ background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:10px 12px; }
+  .bpmTop{ display:flex; justify-content:space-between; align-items:baseline; font-size:13px; color:#cdd5f0; margin-bottom:7px; }
+  .bpmVal b{ font-size:17px; color:#ff7a8c; }
+  #bpmRange{ -webkit-appearance:none; appearance:none; width:100%; height:6px; border-radius:5px;
+    background:linear-gradient(90deg,#4a6aa8,#d23b4e); outline:none; }
+  #bpmRange::-webkit-slider-thumb{ -webkit-appearance:none; width:20px; height:20px; border-radius:50%; background:#fff;
+    border:3px solid #d23b4e; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.4); }
+  #bpmRange::-moz-range-thumb{ width:18px; height:18px; border-radius:50%; background:#fff; border:3px solid #d23b4e; cursor:pointer; }
+  /* 3D-Beschriftungs-Ebene */
+  #labels3d{ position:fixed; inset:0; z-index:8; pointer-events:none; }
+  .lab3d{ position:absolute; transform:translate(-50%,-50%); white-space:nowrap; pointer-events:auto; cursor:pointer;
+    background:rgba(12,17,33,.82); border:1px solid rgba(255,255,255,.3); color:#fff; font-size:12px; font-weight:600;
+    padding:4px 10px; border-radius:20px; backdrop-filter:blur(4px); box-shadow:0 2px 8px rgba(0,0,0,.4); }
+  .lab3d:hover{ border-color:#ffd84a; }
+  .lab3d.sel{ background:#d23b4e; border-color:#fff; }
+  .lab3d::after{ content:''; position:absolute; left:50%; bottom:-5px; width:7px; height:7px; transform:translateX(-50%) rotate(45deg);
+    background:rgba(12,17,33,.82); border-right:1px solid rgba(255,255,255,.3); border-bottom:1px solid rgba(255,255,255,.3); }
+  /* 3D-Seitenleiste */
+  #sideInfo3d{ position:fixed; right:0; top:0; bottom:0; width:330px; background:var(--panel); border-left:1px solid rgba(255,255,255,.14);
+    backdrop-filter:blur(10px); padding:60px 18px 18px; overflow-y:auto; transform:translateX(102%); transition:transform .35s cubic-bezier(.2,.8,.2,1); z-index:18; }
+  #sideInfo3d.open{ transform:translateX(0); }
+  #sideInfo3d h2{ margin:0 0 12px; font-size:17px; display:flex; align-items:center; gap:9px; }
+  #sideInfo3d h2 .dot{ width:12px; height:12px; border-radius:50%; }
+  #sideInfo3d p{ font-size:13.5px; line-height:1.6; color:#dfe5fb; }
+  .imgbox{ background:#fff; border-radius:12px; overflow:hidden; margin-bottom:12px; }
+  .imgbox img{ width:100%; display:block; }
+  .imgbox .cred{ font-size:10.5px; color:#5a5a5a; padding:5px 8px; background:#f2f2f2; }
+  .closeX{ position:absolute; top:14px; right:14px; border:none; background:none; color:var(--muted); font-size:22px; cursor:pointer; }
+  .cbtn{ appearance:none; border:1px solid rgba(255,255,255,.14); background:var(--panel); color:var(--text);
+    padding:9px 12px; border-radius:11px; font-size:13px; font-weight:600; cursor:pointer; backdrop-filter:blur(8px); }
+  .cbtn:active{ transform:scale(.97); }
+  #hint3d{ position:fixed; bottom:14px; left:50%; transform:translateX(-50%); z-index:15; font-size:12px;
+    color:var(--muted); background:var(--panel); border:1px solid rgba(255,255,255,.12); padding:7px 14px;
+    border-radius:20px; backdrop-filter:blur(8px); }
+
+  /* ---- Querschnitt-Ansicht ---- */
+  #viewSection{ position:fixed; inset:0; display:none; opacity:1; transition:opacity .55s ease; z-index:5; }
+  #secWrap{ position:absolute; inset:0; display:flex; }
+  #stage{ flex:1; min-width:0; display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(120% 120% at 50% 28%, #161d30, #0b1020 60%, #05070c); }
+  #heartSVG{ width:100%; height:100%; max-height:100vh; display:block; }
+  #side{ width:320px; flex:0 0 320px; background:var(--panel); border-left:1px solid rgba(255,255,255,.12);
+    backdrop-filter:blur(10px); padding:64px 18px 16px; display:flex; flex-direction:column; gap:12px; overflow-y:auto; }
+  #side h2{ margin:0; font-size:16px; display:flex; align-items:center; gap:8px; }
+  #side .step{ font-size:11.5px; color:var(--muted); font-weight:700; letter-spacing:.4px; text-transform:uppercase; }
+  #side p{ margin:0; font-size:13.5px; line-height:1.6; color:#dfe5fb; }
+  #side .dot{ width:12px; height:12px; border-radius:50%; flex:0 0 auto; }
+  #secCtrl{ position:fixed; bottom:16px; left:0; right:320px; z-index:15; display:flex; flex-direction:row; flex-wrap:wrap; justify-content:center; gap:9px; pointer-events:none; padding:0 10px; }
+  #secCtrl .tog{ pointer-events:auto; }
+  .tempoCtrl{ pointer-events:auto; display:flex; align-items:center; gap:10px; background:var(--panel);
+    border:1px solid rgba(255,255,255,.14); border-radius:11px; padding:8px 13px; font-size:12.5px; font-weight:600; color:#cdd5f0;
+    backdrop-filter:blur(8px); }
+  .tempoCtrl b{ color:#ff7a8c; min-width:34px; text-align:right; }
+  #flowRange{ -webkit-appearance:none; appearance:none; width:120px; height:6px; border-radius:5px;
+    background:linear-gradient(90deg,#3b6, #d23b4e); outline:none; }
+  #flowRange::-webkit-slider-thumb{ -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:#fff;
+    border:3px solid #d23b4e; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.4); }
+  #flowRange::-moz-range-thumb{ width:16px; height:16px; border-radius:50%; background:#fff; border:3px solid #d23b4e; cursor:pointer; }
+  .factbox{ margin-top:14px; background:rgba(255,210,90,.1); border:1px solid rgba(255,210,90,.35); border-radius:12px;
+    padding:11px 13px; font-size:12.8px; line-height:1.55; color:#ffe6b0; }
+  .factbox b{ color:#ffd76a; }
+  .fnhead{ margin-top:14px; font-size:12px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; color:var(--muted); }
+  .fnlist{ margin:7px 0 0; padding-left:18px; }
+  .fnlist li{ font-size:13px; line-height:1.5; color:#dfe5fb; margin-bottom:4px; }
+  .tog{ appearance:none; border:1px solid rgba(255,255,255,.14); background:var(--panel); color:var(--text);
+    padding:8px 12px; border-radius:11px; font-size:12.5px; font-weight:600; cursor:pointer; backdrop-filter:blur(8px);
+    display:flex; align-items:center; gap:8px; min-width:168px; }
+  .tog .led{ width:9px; height:9px; border-radius:50%; background:#5fd07a; flex:0 0 auto; }
+  .tog.off .led{ background:#6a7390; }
+  #tourNav{ display:flex; gap:8px; margin-top:6px; }
+  #tourNav button{ flex:1; appearance:none; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06);
+    color:#fff; font-weight:700; font-size:13px; padding:9px 0; border-radius:10px; cursor:pointer; }
+  #tourNav button:disabled{ opacity:.4; cursor:default; }
+  #startTour{ appearance:none; border:none; cursor:pointer; font-weight:700; font-size:14px; color:#fff;
+    background:linear-gradient(135deg,var(--rot),#962536); padding:11px; border-radius:11px; width:100%; }
+  #tourBadge{ display:none; align-items:center; gap:6px; font-size:11px; color:#ffd9df;
+    background:rgba(210,59,78,.2); border:1px solid rgba(210,59,78,.45); padding:4px 10px; border-radius:20px; align-self:flex-start; }
+  .legend2{ display:flex; gap:14px; font-size:11.5px; color:var(--muted); margin-top:auto; padding-top:10px; }
+  .legend2 i{ width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:5px; }
+  .valveInfo{ background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12); border-radius:11px; padding:11px 12px; }
+  .valveInfo b{ color:#fff; }
+
+  /* SVG-Stilklassen */
+  .vlabel{ font:700 16px system-ui,sans-serif; fill:#eef2ff; }
+  .vlabel.hl{ fill:#2a2410; }
+  .vlbox{ fill:rgba(16,22,40,.82); stroke:rgba(255,255,255,.28); stroke-width:1.2; }
+  .vlbox.hl{ fill:#ffd84a; stroke:#fff; stroke-width:2; }
+  .vlead{ stroke:#9aa3c0; stroke-width:1.2; fill:none; }
+  .clickable{ cursor:pointer; }
+
+  #intro{ position:fixed; inset:0; z-index:40; display:flex; align-items:center; justify-content:center;
+    background:rgba(3,5,12,.8); backdrop-filter:blur(6px); text-align:center; padding:24px; }
+  #intro .card{ max-width:430px; background:var(--panel); border:1px solid rgba(255,255,255,.16); border-radius:18px; padding:26px 24px; }
+  #intro h2{ margin:0 0 8px; } #intro ul{ text-align:left; font-size:14px; line-height:1.7; color:#dfe5fb; }
+  #intro button{ appearance:none; border:none; cursor:pointer; font-weight:700; font-size:15px; color:#fff;
+    background:linear-gradient(135deg,var(--rot),#962536); padding:12px 26px; border-radius:12px; margin-top:8px; }
+  .hb{ font-size:38px; animation:beat 1s infinite; } @keyframes beat{0%,100%{transform:scale(1)}15%{transform:scale(1.18)}30%{transform:scale(1)}45%{transform:scale(1.1)}60%{transform:scale(1)}}
+
+  @media (max-width:760px){
+    #side{ position:fixed; left:0; right:0; bottom:0; top:auto; width:auto; height:42vh; border-left:none;
+      border-top:1px solid rgba(255,255,255,.12); padding:14px 14px; }
+    #secWrap{ flex-direction:column; } #stage{ height:58vh; flex:none; }
+    #secCtrl{ right:0; bottom:auto; top:104px; flex-wrap:wrap; } #secCtrl .tog{ min-width:0; font-size:11px; padding:7px 9px; }
+    #sideInfo3d{ width:100%; left:0; }
+    header p{ display:none; }
+  }
+</style>
+</head>
+<body>
+  <header><h1>❤️ Das menschliche Herz</h1><p id="subtitle">Außenansicht – drehen & zoomen</p></header>
+
+  <div id="switch">
+    <button id="btn3d" class="active">🫀 Außenansicht</button>
+    <button id="btnSec">🔬 Querschnitt</button>
+  </div>
+
+  <!-- ================= 3D AUSSENANSICHT ================= -->
+  <div id="view3d">
+    <canvas id="scene"></canvas>
+    <div id="ctrl3d">
+      <div class="panelTitle">⚙ Steuerung</div>
+      <button class="bigbtn tog" id="beat3dBtn"><span class="led"></span>❤ Herzschlag</button>
+      <button class="bigbtn tog off" id="sound3dBtn"><span class="led"></span>🔊 Herzton</button>
+      <button class="bigbtn tog off" id="labels3dBtn"><span class="led"></span>🏷 Beschriftungen</button>
+      <div class="bpmRow">
+        <div class="bpmTop"><span>Herzrate</span><span class="bpmVal"><b id="bpmNum">75</b> BPM</span></div>
+        <input type="range" id="bpmRange" min="40" max="180" value="75" />
+      </div>
+      <button class="bigbtn ghost" id="resetBtn">↺ Ansicht zurück</button>
+    </div>
+    <div id="labels3d"></div>
+    <div id="hint3d">Ziehen = drehen · Mausrad / zwei Finger = zoomen · Teil antippen für Infos</div>
+    <aside id="sideInfo3d">
+      <button class="closeX" id="info3dClose">×</button>
+      <h2><span class="dot" id="info3dDot"></span><span id="info3dTitle"></span></h2>
+      <p id="info3dText"></p>
+      <div class="fnhead">Funktion:</div>
+      <ul class="fnlist" id="info3dList"></ul>
+      <div class="factbox" id="info3dFact"></div>
+    </aside>
+  </div>
+
+  <!-- ================= 2D QUERSCHNITT ================= -->
+  <div id="viewSection">
+    <div id="secCtrl">
+      <button class="tog" id="beatTog"><span class="led"></span>❤ Herzschlag</button>
+      <button class="tog" id="flowTog"><span class="led"></span>🩸 Blutfluss</button>
+      <button class="tog" id="labelTog"><span class="led"></span>🏷 Beschriftungen</button>
+      <div class="tempoCtrl">
+        <span>🩸 Tempo</span>
+        <input type="range" id="flowRange" min="30" max="250" value="100" />
+        <b id="flowVal">1.0×</b>
+      </div>
+    </div>
+    <div id="secWrap">
+      <div id="stage">
+        <svg id="heartSVG" viewBox="-150 -20 1240 680" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+      <aside id="side">
+        <div id="tourBadge">🎬 Geführte Erklärung</div>
+        <h2><span class="dot" id="sideDot" style="background:var(--rot)"></span><span id="sideTitle">Querschnitt durch das Herz</span></h2>
+        <div class="step" id="sideStep"></div>
+        <p id="sideText">Das Herz besteht aus vier Räumen: zwei Vorhöfen (oben) und zwei Kammern (unten). Vier Klappen sorgen dafür, dass das Blut nur in eine Richtung fließt.<br><br>Tipp: Schalte unten den <b>Herzschlag aus</b> und klicke dann auf eine Klappe, um sie selbst zu öffnen oder zu schließen – und zu sehen, was passiert.</p>
+        <div id="valveBox"></div>
+        <div id="tourNav" style="display:none">
+          <button id="prevBtn">◀ Zurück</button>
+          <button id="playBtn">▶ Auto</button>
+          <button id="nextBtn">Weiter ▶</button>
+        </div>
+        <button id="startTour">🎬 Geführte Erklärung starten</button>
+        <button id="endTour" class="cbtn" style="display:none">✕ Erklärung beenden</button>
+        <div class="legend2">
+          <span><i style="background:#4a6aa8"></i>sauerstoffarm</span>
+          <span><i style="background:#d23b4e"></i>sauerstoffreich</span>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <div id="intro">
+    <div class="card">
+      <div class="hb">❤️</div>
+      <h2>Willkommen!</h2>
+      <p style="color:#dfe5fb;font-size:14px">Zwei Ansichten – oben umschaltbar:</p>
+      <ul>
+        <li><b>🫀 Außenansicht:</b> das 3D-Herz frei drehen & zoomen</li>
+        <li><b>🔬 Querschnitt:</b> Blick ins Innere mit beweglichen Klappen, Blutfluss und einer geführten Erklärung des Blutwegs</li>
+      </ul>
+      <button id="startBtn">Los geht's →</button>
+    </div>
+  </div>
+
+<script type="importmap">
+{ "imports": {
+  "three":"https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* =========================================================
+   TEIL 1 — 3D AUSSENANSICHT (drehbar, zoombar, schlagend)
+   ========================================================= */
+const canvas=document.getElementById('scene');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(45,innerWidth/innerHeight,0.1,100);
+camera.position.set(1.6,0.8,6.2);
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true; controls.dampingFactor=0.08; controls.enablePan=false;
+controls.minDistance=3; controls.maxDistance=10; controls.autoRotate=false;
+
+scene.add(new THREE.AmbientLight(0xffffff,0.55));
+const kl=new THREE.DirectionalLight(0xfff2ec,1.2); kl.position.set(4,6,6); scene.add(kl);
+const fl=new THREE.DirectionalLight(0x88aaff,0.45); fl.position.set(-6,-2,-3); scene.add(fl);
+const pl=new THREE.PointLight(0xff7a8c,0.8,30); pl.position.set(-3,3,5); scene.add(pl);
+
+function noise3(x,y,z){return Math.sin(x*3.1+y*1.7)*0.5+Math.sin(y*2.3+z*2.9)*0.3+Math.sin(z*3.7+x*1.3)*0.2+Math.sin((x+y+z)*5.4)*0.12;}
+function organic(mat,rx,ry,rz,amp=0.07){
+  const g=new THREE.SphereGeometry(1,64,48),p=g.attributes.position,v=new THREE.Vector3();
+  for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i);const f=1+amp*noise3(v.x*1.9,v.y*1.9,v.z*1.9);p.setXYZ(i,v.x*f,v.y*f,v.z*f);}
+  g.computeVertexNormals(); const m=new THREE.Mesh(g,mat); m.scale.set(rx,ry,rz); return m;
+}
+function phys(c,o={}){return new THREE.MeshPhysicalMaterial({color:c,roughness:o.r??0.62,metalness:0,clearcoat:o.cc??0.5,clearcoatRoughness:o.ccr??0.35,emissive:o.em??0x3a0c0c,emissiveIntensity:o.emi??0.28,side:THREE.FrontSide});}
+function tube(pts,rad,mat){const c=new THREE.CatmullRomCurve3(pts.map(p=>new THREE.Vector3(...p)));return new THREE.Mesh(new THREE.TubeGeometry(c,80,rad,18,false),mat);}
+
+const heart=new THREE.Group(); scene.add(heart);
+const myo=phys(0x9c2e2e,{r:0.7,em:0x3a0c0c,emi:0.3});
+const lv=organic(myo.clone(),1.05,1.5,1.05,0.06); lv.position.set(0.35,-0.25,0); lv.rotation.z=-0.12;
+const rv=organic(myo.clone(),0.95,1.3,1.0,0.07); rv.position.set(-0.55,-0.15,0.18); rv.rotation.z=0.2;
+const la=organic(myo.clone(),0.7,0.66,0.7,0.08); la.position.set(0.5,0.85,-0.2);
+const ra=organic(myo.clone(),0.78,0.8,0.78,0.08); ra.position.set(-0.65,0.8,0.05);
+const apex=organic(myo.clone(),0.5,0.6,0.5,0.08); apex.position.set(0.45,-1.35,-0.05);
+heart.add(lv,rv,la,ra,apex);
+const beatM=[lv,rv,la,ra,apex];
+const mRich=phys(0xcf3a44,{r:0.5,cc:0.6,em:0,emi:0}), mPoor=phys(0x4a6aa8,{r:0.55,cc:0.5,em:0,emi:0});
+const ves=new THREE.Group(); heart.add(ves);
+// eigene Materialinstanzen, damit Teile einzeln hervorgehoben werden können
+const aortaMat=mRich.clone(), paMat=mPoor.clone(), vcMat=mPoor.clone(), pvMat=mRich.clone();
+const aortaMesh=tube([[0.35,0.35,0.05],[0.28,1.35,0],[0.05,2.0,-0.1],[-0.45,1.95,-0.2],[-0.6,1.25,-0.15],[-0.6,0.4,-0.2]],0.21,aortaMat); ves.add(aortaMesh);
+[[-0.02,1.95,-0.1,0.05,2.7,-0.1],[-0.18,1.98,-0.12,-0.18,2.75,-0.12],[-0.34,1.96,-0.14,-0.4,2.65,-0.18]].forEach(b=>ves.add(tube([[b[0],b[1],b[2]],[b[3],b[4],b[5]]],0.06,aortaMat)));
+const paMesh=tube([[-0.4,0.5,0.55],[-0.38,1.2,0.4],[-0.3,1.55,0.2]],0.2,paMat); ves.add(paMesh);
+ves.add(tube([[-0.3,1.55,0.2],[0.25,1.62,-0.05],[0.75,1.5,-0.2]],0.12,paMat));
+ves.add(tube([[-0.3,1.55,0.2],[-0.85,1.55,0.05],[-1.25,1.45,-0.1]],0.12,paMat));
+const svcMesh=tube([[-0.72,2.05,0.1],[-0.7,1.5,0.08],[-0.66,1.05,0.05]],0.16,vcMat); ves.add(svcMesh);
+const ivcMesh=tube([[-0.68,-1.5,0.1],[-0.7,-0.4,0.08],[-0.66,0.45,0.05]],0.17,vcMat); ves.add(ivcMesh);
+const pvMeshes=[]; [[1.55,1.25,-0.55],[1.55,0.75,-0.6],[0.95,1.55,-0.7],[1.05,0.45,-0.65]].forEach(s=>{const m=tube([[s[0],s[1],s[2]],[0.7,s[1]*0.8+0.2,-0.35]],0.085,pvMat); pvMeshes.push(m); ves.add(m);});
+const cor=new THREE.Group(); heart.add(cor);
+const mCorA=phys(0xd0402f,{r:0.45,cc:0.7,em:0,emi:0});
+cor.add(tube([[0.05,0.95,1.15],[0,0.3,1.35],[0.12,-0.5,1.25],[0.35,-1.2,0.85]],0.045,mCorA));      // LAD
+cor.add(tube([[0.1,0.95,1.15],[-0.6,0.55,1.0],[-1.0,0.2,0.55]],0.04,mCorA));                          // Ramus circumflexus
+cor.add(tube([[-0.2,1.0,1.0],[-0.75,0.55,0.85],[-0.9,-0.1,0.7],[-0.6,-0.7,0.75]],0.045,mCorA));       // RCA
+// viele kleinere Seitenäste über die Oberfläche verteilt (mehr Struktur, nur EIN Label)
+const corTw=[
+ [[0.05,0.6,1.27],[-0.32,0.46,1.08]],[[0.05,0.18,1.34],[0.44,0.12,1.06]],[[0.1,-0.2,1.3],[-0.28,-0.34,1.06]],
+ [[0.16,-0.55,1.2],[0.5,-0.6,0.9]],[[0.2,-0.85,1.05],[-0.12,-0.95,0.92]],[[-0.5,0.5,1.0],[-0.74,0.22,0.72]],
+ [[-0.7,0.2,0.72],[-0.86,-0.2,0.6]],[[-0.6,-0.5,0.8],[-0.3,-0.7,0.96]],[[0.5,0.2,0.96],[0.8,0.0,0.6]],
+ [[0.58,-0.3,0.86],[0.84,-0.6,0.5]],[[0.3,0.5,1.12],[0.6,0.56,0.82]],[[-0.2,0.7,1.12],[-0.46,0.86,0.86]],
+ [[0.0,-0.9,1.0],[0.26,-1.15,0.8]],[[-0.34,-0.2,1.06],[-0.56,-0.46,0.86]],[[0.4,-0.05,1.06],[0.6,-0.26,0.86]],
+ [[-0.12,0.34,1.27],[0.12,0.46,1.16]],[[0.28,-0.4,1.16],[0.12,-0.62,1.0]],[[-0.45,0.0,1.0],[-0.62,-0.3,0.82]],
+ [[0.45,0.4,1.0],[0.62,0.62,0.78]],[[-0.05,-0.6,1.18],[-0.32,-0.78,0.96]]
+];
+corTw.forEach(s=>cor.add(tube(s,0.02,mCorA)));
+// noch feinere Verästelungen
+const corTw2=[
+ [[-0.32,0.46,1.08],[-0.5,0.4,0.92]],[[0.44,0.12,1.06],[0.62,0.05,0.86]],[[-0.28,-0.34,1.06],[-0.45,-0.55,0.9]],
+ [[0.5,-0.6,0.9],[0.66,-0.85,0.66]],[[0.26,-1.15,0.8],[0.05,-1.3,0.7]],[[-0.74,0.22,0.72],[-0.9,0.0,0.55]],
+ [[0.6,0.56,0.82],[0.78,0.66,0.6]],[[-0.46,0.86,0.86],[-0.66,0.92,0.62]],[[0.12,0.46,1.16],[0.3,0.62,1.0]],
+ [[0.6,-0.26,0.86],[0.78,-0.45,0.6]]
+];
+corTw2.forEach(s=>cor.add(tube(s,0.014,mCorA)));
+// dichtes, untereinander verbundenes Venennetz über die Vorderseite beider Kammern
+function surfZ(x,y){ const t=1-(x/1.34)*(x/1.34)-((y+0.2)/1.62)*((y+0.2)/1.62); return t>0.05? 1.22*Math.sqrt(t):null; }
+// geschwungene Vene zwischen zwei Oberflächenpunkten (leicht nach außen gewölbt → liegt auf dem Herzen)
+function vein(a,b,r){
+  const mx=(a[0]+b[0])/2+0.05*Math.sin((a[1]-b[1])*6), my=(a[1]+b[1])/2+0.04*Math.sin((a[0]-b[0])*6);
+  const mz=(surfZ(mx,my)??Math.max(a[2],b[2]))+0.04;
+  const c=new THREE.CatmullRomCurve3([new THREE.Vector3(...a),new THREE.Vector3(mx,my,mz),new THREE.Vector3(...b)]);
+  return new THREE.Mesh(new THREE.TubeGeometry(c,10,r,6,false),mCorA);
+}
+const vCols=[-0.85,-0.62,-0.4,-0.18,0.05,0.28,0.5,0.72,0.92];
+const vRows=[0.5,0.18,-0.15,-0.48,-0.8,-1.12];
+const vGrid=[];
+for(let r=0;r<vRows.length;r++){ vGrid[r]=[]; for(let c=0;c<vCols.length;c++){
+  const jx=0.09*Math.sin(r*1.7+c*2.6), jy=0.07*Math.cos(c*1.9+r*1.3);     // organischer Versatz
+  const x=vCols[c]+jx, y=vRows[r]+jy, z=surfZ(x,y); vGrid[r][c]= z!==null?[x,y,z+0.02]:null; } }
+for(let r=0;r<vRows.length;r++)for(let c=0;c<vCols.length;c++){ const p=vGrid[r][c]; if(!p)continue;
+  if(c+1<vCols.length && vGrid[r][c+1]) cor.add(vein(p,vGrid[r][c+1],0.013));
+  if(r+1<vRows.length && vGrid[r+1][c]) cor.add(vein(p,vGrid[r+1][c],0.013));
+  if(r+1<vRows.length && c+1<vCols.length && vGrid[r+1][c+1] && ((r+c)%3!==0)) cor.add(vein(p,vGrid[r+1][c+1],0.009));
+  if(r+1<vRows.length && c-1>=0 && vGrid[r+1][c-1] && ((r+c)%3===0)) cor.add(vein(p,vGrid[r+1][c-1],0.009));
+}
+
+let beat3d=true; const baseS=new Map(); beatM.forEach(m=>baseS.set(m,m.scale.clone()));
+function thump(x){return Math.exp(-Math.pow(x/0.07,2));}
+let t3=0, prevC=0, bpm=75, period=60/bpm; const clock=new THREE.Clock();
+
+// ---- Herzton (synthetisiert, kein fremdes Tonmaterial) ----
+let audioCtx=null, soundOn=false;
+function ensureAudio(){ if(!audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+  if(audioCtx && audioCtx.state==='suspended') audioCtx.resume(); }
+function thumpSound(freq,dur,gain){ if(!audioCtx)return; const t=audioCtx.currentTime;
+  const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+  o.type='sine'; o.frequency.setValueAtTime(freq,t); o.frequency.exponentialRampToValueAtTime(freq*0.5,t+dur);
+  g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(gain,t+0.014); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.connect(g); g.connect(audioCtx.destination); o.start(t); o.stop(t+dur+0.03); }
+const playLub=()=>thumpSound(58,0.17,0.6), playDub=()=>thumpSound(46,0.13,0.45);
+
+const beat3dBtn=document.getElementById('beat3dBtn'), sound3dBtn=document.getElementById('sound3dBtn'),
+      bpmRange=document.getElementById('bpmRange'), bpmNum=document.getElementById('bpmNum');
+function syncBeatBtn(){ beat3dBtn.classList.toggle('off',!beat3d); }
+beat3dBtn.onclick=()=>{ beat3d=!beat3d; syncBeatBtn(); };
+sound3dBtn.onclick=()=>{ soundOn=!soundOn; sound3dBtn.classList.toggle('off',!soundOn); if(soundOn) ensureAudio(); };
+bpmRange.oninput=()=>{ bpm=+bpmRange.value; period=60/bpm; bpmNum.textContent=bpm; };
+syncBeatBtn();
+document.getElementById('resetBtn').onclick=()=>{camera.position.set(1.6,0.8,6.2);controls.target.set(0,0,0);};
+
+let mode='3d', run3d=false, run2d=false, camTween=null, labelsOn3d=false;
+const _tg=new THREE.Vector3(), _pv=new THREE.Vector3();
+function easeIO(x){return x<0.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;}
+function loop3d(){
+  if(!run3d){return;}
+  requestAnimationFrame(loop3d);
+  const dt=Math.min(clock.getDelta(),0.05);
+  if(beat3d){t3+=dt;const c=(t3%period)/period;
+    const s=1-0.055*thump(c-0.10)-0.03*thump(c-0.40);   // Lub-Dub Doppelschlag
+    const a=1-0.05*thump(c-0.02);
+    const ap=(m,sc)=>{const b=baseS.get(m);m.scale.set(b.x*sc,b.y*sc,b.z*sc);};
+    ap(lv,s);ap(rv,s);ap(apex,s);ap(la,a);ap(ra,a);
+    if(soundOn){ if(prevC<=0.10&&c>0.10) playLub(); if(prevC<=0.40&&c>0.40) playDub(); }
+    prevC=c;
+  }
+  if(camTween){ camTween.e=Math.min(1,camTween.e+dt/camTween.dur); const k=easeIO(camTween.e);
+    camera.position.lerpVectors(camTween.fp,camTween.tp,k);
+    _tg.lerpVectors(camTween.ft,camTween.tt,k); controls.target.copy(_tg); camera.lookAt(_tg);
+    if(camTween.e>=1){const d=camTween.done; camTween=null; if(d)d();} }
+  else { controls.update(); }
+  if(labelsOn3d && typeof updateLabels3d==='function') updateLabels3d();
+  renderer.render(scene,camera);
+}
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+
+/* =========================================================
+   TEIL 2 — 2D QUERSCHNITT (klar illustriert, animiert)
+   ========================================================= */
+const SVGNS='http://www.w3.org/2000/svg';
+const svg=document.getElementById('heartSVG');
+function el(tag,attrs){const e=document.createElementNS(SVGNS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);return e;}
+
+// ----- defs (Farbverläufe) -----
+const defs=el('defs',{});
+defs.innerHTML=`
+  <radialGradient id="gMyo" cx="44%" cy="32%" r="82%">
+    <stop offset="0%" stop-color="#ecb3a8"/><stop offset="48%" stop-color="#d2837b"/><stop offset="100%" stop-color="#a24f4c"/>
+  </radialGradient>
+  <radialGradient id="gMyoR" cx="44%" cy="32%" r="82%">
+    <stop offset="0%" stop-color="#e7a59c"/><stop offset="48%" stop-color="#c4726e"/><stop offset="100%" stop-color="#974746"/>
+  </radialGradient>
+  <radialGradient id="gBlue" cx="40%" cy="30%" r="85%">
+    <stop offset="0%" stop-color="#9cbfe2"/><stop offset="55%" stop-color="#5f86b7"/><stop offset="100%" stop-color="#34527e"/>
+  </radialGradient>
+  <radialGradient id="gRed" cx="40%" cy="30%" r="85%">
+    <stop offset="0%" stop-color="#dd928c"/><stop offset="55%" stop-color="#bd5d5b"/><stop offset="100%" stop-color="#8a3a3c"/>
+  </radialGradient>
+  <linearGradient id="gVesRed" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#b8434b"/><stop offset="38%" stop-color="#e07a7e"/><stop offset="60%" stop-color="#d35a5f"/><stop offset="100%" stop-color="#a83a44"/></linearGradient>
+  <linearGradient id="gVesBlue" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#456a9e"/><stop offset="38%" stop-color="#7ea4d2"/><stop offset="60%" stop-color="#5e84b5"/><stop offset="100%" stop-color="#436399"/></linearGradient>
+  <linearGradient id="gFat" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f6e3a2"/><stop offset="100%" stop-color="#dcc063"/></linearGradient>
+  <radialGradient id="gPap" cx="36%" cy="26%" r="88%"><stop offset="0%" stop-color="#cd817b"/><stop offset="100%" stop-color="#8a3d3c"/></radialGradient>
+  <radialGradient id="gPapB" cx="36%" cy="26%" r="88%"><stop offset="0%" stop-color="#bf716f"/><stop offset="100%" stop-color="#7e3838"/></radialGradient>
+  <linearGradient id="gFluidBlue" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#86acd8"/><stop offset="100%" stop-color="#3f6aa2"/></linearGradient>
+  <linearGradient id="gFluidRed" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#d96d6b"/><stop offset="100%" stop-color="#9c3539"/></linearGradient>
+  <radialGradient id="gEmptyBlue" cx="40%" cy="30%" r="85%"><stop offset="0%" stop-color="#3c4f66"/><stop offset="100%" stop-color="#202d3f"/></radialGradient>
+  <radialGradient id="gEmptyRed" cx="40%" cy="30%" r="85%"><stop offset="0%" stop-color="#5b3236"/><stop offset="100%" stop-color="#321b1f"/></radialGradient>
+  <linearGradient id="gLeaf" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f7f1f3"/><stop offset="100%" stop-color="#d9c7cd"/></linearGradient>
+  <filter id="soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3"/></filter>
+  <filter id="ds" x="-25%" y="-25%" width="150%" height="160%"><feDropShadow dx="0" dy="7" stdDeviation="9" flood-color="#3a1414" flood-opacity="0.3"/></filter>
+  <filter id="cavShade" x="-30%" y="-30%" width="160%" height="160%">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="7"/><feOffset dx="0" dy="4" result="o"/>
+    <feFlood flood-color="#2a0d12" flood-opacity="0.5"/><feComposite in2="o" operator="in"/>
+    <feComposite in2="SourceGraphic" operator="over"/>
+  </filter>
+`;
+svg.appendChild(defs);
+
+// Layer-Gruppen (Reihenfolge = Zeichenreihenfolge)
+const Lves=el('g',{}), Lmyo=el('g',{}), Lcav=el('g',{}), Lfluid=el('g',{}), Ldetail=el('g',{}),
+      Lvalve=el('g',{}), Lstream=el('g',{}), Lflow=el('g',{}), Lhi=el('g',{}), Llabel=el('g',{}), Lpaths=el('g',{});
+[Lves,Lmyo,Lcav,Lfluid,Ldetail,Lvalve,Lstream,Lhi,Lflow,Llabel,Lpaths].forEach(g=>svg.appendChild(g));
+Lpaths.setAttribute('visibility','hidden'); // unsichtbare Flusspfade
+Lhi.setAttribute('opacity','0');
+
+// ---------- Gefäße (hinter dem Myokard-Oberteil) ----------
+function vessel(d,w,fill){ Lves.appendChild(el('path',{d,fill:'none',stroke:fill,'stroke-width':w,'stroke-linecap':'round'})); }
+// Aorta (rot) – aufsteigend + Bogen
+vessel('M486,250 C 486,170 480,120 440,95 C 380,62 320,70 286,96',38,'url(#gVesRed)');
+// Aortenbogen-Äste – fließend aus dem Bogen heraus geschwungen
+['M416,86 C 414,58 412,44 410,28','M374,72 C 374,50 374,38 374,24','M330,80 C 326,56 322,44 318,28']
+  .forEach(d=>vessel(d,14,'url(#gVesRed)'));
+// Lungenstamm (blau) + Äste
+vessel('M384,236 C 380,170 372,130 360,104',34,'url(#gVesBlue)');
+vessel('M360,108 C 300,96 250,104 214,120',16,'url(#gVesBlue)');
+vessel('M360,108 C 430,98 470,104 500,120',16,'url(#gVesBlue)');
+// obere Hohlvene (blau)
+vessel('M250,150 C 244,96 240,60 236,30',32,'url(#gVesBlue)');
+// untere Hohlvene (blau)
+vessel('M250,300 C 232,420 224,520 220,608',30,'url(#gVesBlue)');
+// Lungenvenen (rot) rechts in den linken Vorhof
+vessel('M620,205 C 700,196 780,190 858,196',15,'url(#gVesRed)');
+vessel('M624,234 C 700,240 780,250 858,262',15,'url(#gVesRed)');
+
+// ---------- Myokard (eine klare Silhouette mit Kontur) ----------
+Lmyo.appendChild(el('path',{
+  d:'M168,196 C 150,260 132,322 140,374 C 156,478 256,580 392,622 C 404,627 416,628 430,621 C 566,572 690,470 704,356 C 716,276 710,210 676,186 C 560,150 286,150 168,196 Z',
+  fill:'url(#gMyo)', stroke:'#8a4444', 'stroke-width':2, 'stroke-opacity':0.5, 'stroke-linejoin':'round', filter:'url(#ds)'}));
+// weicher Glanz-Schein oben links (Beleuchtung)
+Lmyo.appendChild(el('ellipse',{cx:330,cy:300,rx:230,ry:200,fill:'#ffffff',opacity:0.10,filter:'url(#soft)'}));
+
+// ---------- Kammern als Flüssigkeitsbehälter ----------
+// Jede Kammer: dunkler „leerer" Hintergrund + eine clip-begrenzte Flüssigkeit (Füllstand animierbar)
+const CAVD={
+  RA:'M250,160 C 180,165 165,235 200,288 C 250,320 330,300 345,250 C 352,195 320,158 250,160 Z',
+  RV:'M205,300 C 165,330 165,470 230,545 C 300,600 380,560 410,470 C 430,400 420,330 380,305 C 320,285 250,288 205,300 Z',
+  LA:'M540,160 C 480,168 478,238 512,286 C 565,320 660,308 672,248 C 680,190 620,156 540,160 Z',
+  LV:'M500,305 C 470,345 472,470 512,540 C 560,600 620,560 632,470 C 642,380 628,330 600,308 C 565,292 530,295 500,305 Z'
+};
+const CAVBOX={ RA:{x:158,w:200,yTop:158,yBot:320}, RV:{x:158,w:284,yTop:288,yBot:600},
+               LA:{x:472,w:208,yTop:156,yBot:320}, LV:{x:464,w:176,yTop:292,yBot:600} };
+const chambers={};
+function makeChamber(key,emptyGrad,fluidGrad){
+  const d=CAVD[key], box=CAVBOX[key];
+  const base=el('path',{id:'cav'+key,d,fill:emptyGrad,stroke:'#5a2228','stroke-width':1.2,'stroke-opacity':0.4,filter:'url(#cavShade)'});
+  Lcav.appendChild(base);
+  const cp=el('clipPath',{id:'clip'+key,clipPathUnits:'userSpaceOnUse'}); cp.appendChild(el('path',{d})); defs.appendChild(cp);
+  const g=el('g',{'clip-path':`url(#clip${key})`});
+  const rect=el('rect',{x:box.x,y:box.yBot,width:box.w,height:0,fill:fluidGrad});
+  const surf=el('rect',{x:box.x,y:box.yBot,width:box.w,height:3,fill:'#ffffff','fill-opacity':0.25}); // Flüssigkeits-Oberfläche
+  g.appendChild(rect); g.appendChild(surf); Lfluid.appendChild(g);
+  chambers[key]={base,g,rect,surf,box,level:1};
+  return chambers[key];
+}
+makeChamber('RA','url(#gEmptyBlue)','url(#gFluidBlue)');
+makeChamber('RV','url(#gEmptyBlue)','url(#gFluidBlue)');
+makeChamber('LA','url(#gEmptyRed)','url(#gFluidRed)');
+makeChamber('LV','url(#gEmptyRed)','url(#gFluidRed)');
+function applyLevel(ch){ const h=(ch.box.yBot-ch.box.yTop)*ch.level; const y=ch.box.yBot-h;
+  ch.rect.setAttribute('y',y); ch.rect.setAttribute('height',h);
+  ch.surf.setAttribute('y',y-1); ch.surf.setAttribute('opacity', ch.level>0.04&&ch.level<0.99?1:0); }
+function setChamberScale(ch,s){ const b=ch.box, cx=b.x+b.w/2, cy=(b.yTop+b.yBot)/2;
+  const t=`translate(${cx},${cy}) scale(${s}) translate(${-cx},${-cy})`; ch.base.setAttribute('transform',t); ch.g.setAttribute('transform',t); }
+
+// Ausflusstrakte: angedeuteter Weg von der Kammer zur Taschenklappe (liegt hinter dem Gewebe → gestrichelt/transparent)
+// LV → Aortenklappe → weiter aufsteigend in die Aorta
+Lcav.appendChild(el('path',{id:'lvot',d:'M548,316 C 524,286 504,254 498,224 C 492,190 480,150 462,118 L 442,124 C 456,158 470,196 476,248 C 476,286 506,308 526,332 Z',
+  fill:'url(#gRed)','fill-opacity':0.38, stroke:'#9a4a4a','stroke-width':1.4,'stroke-dasharray':'5 4','stroke-opacity':0.7}));
+// RV → Pulmonalklappe → weiter aufsteigend in den Lungenstamm
+Lcav.appendChild(el('path',{id:'rvot',d:'M330,318 C 348,286 372,250 380,210 C 384,176 380,142 372,112 L 388,108 C 398,144 398,196 396,248 C 392,286 372,306 358,332 Z',
+  fill:'url(#gBlue)','fill-opacity':0.38, stroke:'#3f5f8c','stroke-width':1.4,'stroke-dasharray':'5 4','stroke-opacity':0.7}));
+
+// Innenschatten in den Höhlen (Tiefe)
+[['cavRA',270,210],['cavRV',300,430],['cavLA',590,205],['cavLV',560,430]].forEach(()=>{});
+
+// ---------- Trabekel (Muskelbälkchen an den Kammerwänden) ----------
+// Trabekel (Muskelbälkchen) – als längliche, geschattete Bälkchen entlang der Kammerwände
+function trab(cx,cy,rx,ry,a0,a1,n,len,w,grad){
+  for(let i=0;i<n;i++){ const a=a0+(a1-a0)*(i/(n-1));
+    const x=cx+Math.cos(a)*rx, y=cy+Math.sin(a)*ry;
+    const L=len*(0.6+0.55*Math.abs(Math.sin(i*1.9+1)));
+    const mx=x-Math.cos(a)*L*0.5, my=y-Math.sin(a)*L*0.5;
+    const ang=Math.atan2(-Math.sin(a),-Math.cos(a))*180/Math.PI;
+    Ldetail.appendChild(el('ellipse',{cx:mx,cy:my,rx:L*0.5,ry:w,fill:grad,opacity:0.95,transform:`rotate(${ang},${mx},${my})`}));
+  }
+}
+// (Trabekel-Ovale entfernt – glatte Kammerwände)
+
+
+// ---------- Klappen ----------
+// AV-Segel (Mitralklappe = 2 Segel, Trikuspidalklappe = 3 Segel)
+function leaflet(d,hinge,openAngle,cls){
+  const p=el('path',{d,fill:'url(#gLeaf)',stroke:'#bfa9b1','stroke-width':1.1,'stroke-linejoin':'round'});
+  p.dataset.hinge=hinge.join(','); p.dataset.open=openAngle; p.classList.add(cls);
+  Lvalve.appendChild(p); return p;
+}
+// Trikuspidalklappe (RA->RV) – DREI Segel
+const triL=leaflet('M206,294 C 224,332 246,362 264,382 C 252,354 230,322 220,300 Z',[206,294], 40,'vTri');
+const triM=leaflet('M270,293 C 266,332 269,362 272,384 C 276,360 279,330 283,300 Z',[272,293],  8,'vTri');
+const triR=leaflet('M340,294 C 322,332 298,362 280,382 C 294,354 322,322 332,300 Z',[340,294],-40,'vTri');
+// Mitralklappe (LA->LV) – ZWEI Segel
+const mitL=leaflet('M508,294 C 528,332 550,360 566,382 C 552,356 526,324 520,300 Z',[508,294], 32,'vMit');
+const mitR=leaflet('M624,294 C 602,332 582,360 566,382 C 580,356 608,324 614,300 Z',[624,294],-28,'vMit');
+
+// Semilunarklappen (Taschenklappen) – je DREI Taschen, Öffnen/Schließen über Skalierung
+function semilunar(cx,cy,cls){
+  const g=el('g',{}); g.dataset.center=cx+','+cy; g.classList.add(cls);
+  for(let k=-1;k<=1;k++){ const x=cx+k*15;
+    g.appendChild(el('path',{d:`M${x-13},${cy} Q ${x},${cy-22} ${x+13},${cy} Q ${x},${cy-7} ${x-13},${cy} Z`,fill:'url(#gLeaf)',stroke:'#bfa9b1','stroke-width':1.1})); }
+  Lvalve.appendChild(g); return g;
+}
+const aortV=semilunar(486,250,'vAor');     // Aortenklappe (3 Taschen)
+const pulmV=semilunar(384,250,'vPul');     // Pulmonalklappe (3 Taschen)
+
+// ---------- Unsichtbare Flusspfade ----------
+function fpath(id,d){ const p=el('path',{id,d,fill:'none',stroke:'none'}); Lpaths.appendChild(p); return p; }
+const FP={
+  svc:   fpath('fp_svc','M236,20 C 244,110 250,150 270,210'),
+  ivc:   fpath('fp_ivc','M220,620 C 230,430 252,300 272,214'),
+  ra_rv: fpath('fp_rarv','M272,210 C 272,300 285,360 300,440'),
+  rv_pa: fpath('fp_rvpa','M300,440 C 345,330 372,280 384,238 C 380,170 368,120 360,80'),
+  pv_la: fpath('fp_pvla','M860,205 C 760,205 690,205 600,210'),
+  la_lv: fpath('fp_lalv','M600,210 C 580,300 566,340 560,440'),
+  lv_ao: fpath('fp_lvao','M560,440 C 520,330 492,285 486,250 C 486,160 470,110 430,90 C 360,58 300,70 280,92')
+};
+const FPlen={}; for(const k in FP) FPlen[k]=FP[k].getTotalLength();
+
+// ---------- Beschriftungen ----------
+// Beschriftung AUSSERHALB des Bildes (linke & rechte Spalte) mit klaren Leitlinien
+const LBL_L=-146, LBL_R=1058;
+const LABELS=[
+  // [Text, Seite, Label-Y, Ziel-X, Ziel-Y]
+  ['obere Hohlvene','L',70,236,60],
+  ['Lungenstamm','L',140,356,150],
+  ['rechter Vorhof','L',225,250,212],
+  ['Pulmonalklappe','L',300,382,250],
+  ['Trikuspidalklappe','L',372,268,332],
+  ['rechte Kammer','L',470,290,470],
+  ['untere Hohlvene','L',610,224,592],
+  ['Aorta','R',70,432,96],
+  ['linker Vorhof','R',150,592,206],
+  ['Lungenvenen','R',225,706,210],
+  ['Aortenklappe','R',300,488,250],
+  ['Mitralklappe','R',372,566,332],
+  ['linke Kammer','R',470,584,470],
+  ['Kammerseptum','R',620,452,468]
+];
+const labelEls={};
+function buildLabels(){
+  Llabel.innerHTML=''; for(const k in labelEls) delete labelEls[k];
+  LABELS.forEach(([txt,side,ty,px,py])=>{
+    const left=(side==='L'); const lx=left?LBL_L:LBL_R;
+    const tw=txt.length*8.6, boxX=left?lx-10:lx-tw-10, boxW=tw+20, boxY=ty-19, boxH=27;
+    const edge=left?boxX+boxW:boxX;     // innere Kante des Kastens → Leitlinie
+    Llabel.appendChild(el('line',{x1:edge,y1:ty-3,x2:px,y2:py,stroke:'#9aa3c0','stroke-width':1.4,'stroke-opacity':0.8}));
+    Llabel.appendChild(el('circle',{cx:px,cy:py,r:4,fill:'#cdd5f0'}));
+    const box=el('rect',{x:boxX,y:boxY,width:boxW,height:boxH,rx:8,class:'vlbox'}); Llabel.appendChild(box);
+    const t=el('text',{x:left?boxX+10:boxX+boxW-10,y:ty,class:'vlabel','text-anchor':left?'start':'end'}); t.textContent=txt; Llabel.appendChild(t);
+    labelEls[txt]={box,t};
+  });
+}
+buildLabels();
+function highlightLabels(list){
+  for(const k in labelEls){ const on=list&&list.includes(k);
+    labelEls[k].box.classList.toggle('hl',on); labelEls[k].t.classList.toggle('hl',on); }
+}
+
+/* ---------- Klappen-Logik / Zustände ---------- */
+const valves={
+  tri:{f:1,t:1,name:'Trikuspidalklappe',side:'blau',
+       open:'Die Trikuspidalklappe ist <b>offen</b> – Blut fließt vom rechten Vorhof in die rechte Kammer.',
+       closed:'Die Trikuspidalklappe ist <b>geschlossen</b> – sie verhindert, dass beim Pumpen Blut aus der rechten Kammer zurück in den Vorhof gedrückt wird.'},
+  mit:{f:1,t:1,name:'Mitralklappe',side:'rot',
+       open:'Die Mitralklappe ist <b>offen</b> – Blut fließt vom linken Vorhof in die linke Kammer.',
+       closed:'Die Mitralklappe ist <b>geschlossen</b> – sie verhindert, dass beim kräftigen Auswurf Blut zurück in den linken Vorhof fließt.'},
+  pul:{f:0,t:0,name:'Pulmonalklappe',side:'blau',
+       open:'Die Pulmonalklappe ist <b>offen</b> – die rechte Kammer pumpt Blut in den Lungenstamm zur Lunge.',
+       closed:'Die Pulmonalklappe ist <b>geschlossen</b> – sie verhindert den Rückstrom aus dem Lungenstamm in die rechte Kammer.'},
+  aor:{f:0,t:0,name:'Aortenklappe',side:'rot',
+       open:'Die Aortenklappe ist <b>offen</b> – die linke Kammer pumpt Blut in die Aorta und damit in den Körper.',
+       closed:'Die Aortenklappe ist <b>geschlossen</b> – sie verhindert, dass Blut aus der Aorta zurück in die linke Kammer fließt.'}
+};
+function setLeaflet(p,f){const[h0,h1]=p.dataset.hinge.split(',').map(Number);const a=parseFloat(p.dataset.open)*f;p.setAttribute('transform',`rotate(${a},${h0},${h1})`);}
+function setSemilunar(g,f){const[cx,cy]=g.dataset.center.split(',').map(Number);g.setAttribute('transform',`translate(${cx},${cy}) scale(1,${1-0.85*f}) translate(${-cx},${-cy})`);g.setAttribute('opacity',1-0.55*f);}
+function applyValves(){
+  setLeaflet(triL,valves.tri.f); setLeaflet(triM,valves.tri.f); setLeaflet(triR,valves.tri.f);
+  setLeaflet(mitL,valves.mit.f); setLeaflet(mitR,valves.mit.f);
+  setSemilunar(aortV,valves.aor.f); setSemilunar(pulmV,valves.pul.f);
+}
+
+/* ---------- Blutfluss als Flüssigkeit ---------- */
+let flowOn=true, beatOn=true, flowSpeed=0.12;   // flowSpeed über Regler einstellbar
+// Vorhof & Kammer füllen sich mit GLEICHER Rate (jeweils über eine Phasenspanne von 0.22):
+//  Vorhof voll (Klappe zu) → Klappe auf → Vorhof entleert in Kammer (beide Rate 1/0.22) → Klappe zu → Auswurf → Vorhof füllt neu
+function atrLvl(ph){
+  if(ph<0.22) return 1-ph/0.22;          // entleert ZÜGIG in die Kammer (kein langes Vollsein)
+  if(ph<0.70) return 0;                   // leer (während die Kammer auswirft)
+  if(ph<0.92) return (ph-0.70)/0.22;      // füllt sich (gleiche Rate wie die Kammer)
+  return 1;                              // voll – nur ganz kurz, dann öffnet die Klappe
+}
+function venLvl(ph){
+  if(ph<0.22) return ph/0.22;             // füllt sich aus dem Vorhof (gleiche Rate)
+  if(ph<0.30) return 1;                   // kurz voll
+  if(ph<0.52) return 1-(ph-0.30)/0.22;    // Auswurf
+  return 0;                              // leer, wartet
+}
+function beatScale(ph,isV){
+  if(isV){ const v=(ph>=0.52&&ph<0.85)?Math.sin((ph-0.52)/0.33*Math.PI):0; return 1-0.09*v; }
+  const a=(ph>=0.30&&ph<0.48)?Math.sin((ph-0.30)/0.18*Math.PI):0; return 1-0.07*a;
+}
+function lerpLevel(ch,target,dt){ ch.level+=(target-ch.level)*Math.min(1,dt*7); applyLevel(ch);
+  setChamberScale(ch, 0.9+0.17*ch.level); }   // Kammer wird beim Füllen größer, beim Entleeren kleiner
+
+// ---- gepunkteter Blutfluss NUR beim Kammer-Auswurf (Kammer → Aorta / Lungenstamm) ----
+const STREAMS={
+ pul:{d:'M345,360 C 362,300 378,258 384,210 C 382,160 374,120 366,88',c:'#7aa6d6',w:14},
+ ao: {d:'M520,360 C 500,300 490,258 486,210 C 486,150 470,108 446,90',c:'#d97a78',w:14}
+};
+const streamEl={};
+for(const id in STREAMS){ const s=STREAMS[id];
+  streamEl[id]=el('path',{d:s.d,fill:'none',stroke:s.c,'stroke-width':s.w,'stroke-linecap':'round','stroke-dasharray':'2 18',opacity:0});
+  Lstream.appendChild(streamEl[id]); }
+// physikalischer „Guss": Blut strömt beim Öffnen der AV-Klappe von oben in die Kammer (säulenförmig bis zur Flüssigkeitsoberfläche)
+function makePour(x,w,grad,clip){ const r=el('rect',{x:x-w/2,width:w,rx:w/2,fill:grad,opacity:0,'clip-path':`url(#${clip})`}); Lstream.appendChild(r); return r; }
+const pourRV=makePour(282,28,'url(#gFluidBlue)','clipRV'), pourLV=makePour(560,24,'url(#gFluidRed)','clipLV');
+let streamT=0;
+function setStream(id,on){ const e=streamEl[id]; if(on){ e.setAttribute('opacity',0.9); e.setAttribute('stroke-dashoffset',-streamT*45); } else e.setAttribute('opacity',0); }
+function updatePour(ch,bar,on){ if(!on){ bar.setAttribute('opacity',0); return; }
+  const surf=ch.box.yBot-ch.level*(ch.box.yBot-ch.box.yTop), top=302, h=surf-top;
+  if(h<=3){ bar.setAttribute('opacity',0); return; }
+  bar.setAttribute('y',top); bar.setAttribute('height',h); bar.setAttribute('opacity',0.82); }
+function updateStreams(dt){ streamT+=dt; const f=flowOn;
+  setStream('pul', f && valves.pul.f>0.5);
+  setStream('ao',  f && valves.aor.f>0.5);
+  updatePour(chambers.RV,pourRV, f && valves.tri.f>0.5);
+  updatePour(chambers.LV,pourLV, f && valves.mit.f>0.5);
+}
+
+/* ---------- Herzschlag-Phasen (freier Modus) ---------- */
+// Herzzyklus mit realistischer Abfolge:
+//  0.00–0.36 Kammerfüllung · 0.36–0.50 Vorhof-Kontraktion (Vorhof-Kick) ·
+//  0.50–0.85 Kammer-Systole (Auswurf) · 0.85–1.0 frühe Erschlaffung
+let phase=0;
+function freeCycle(dt){
+  phase=(phase+dt*flowSpeed)%1;                    // Tempo über Regler
+  // AV-Klappen offen bei Kammerfüllung (0.0–0.22); Taschenklappen beim Auswurf (0.30–0.52)
+  const avOpen=(phase<0.22), slOpen=(phase>=0.30&&phase<0.52);
+  valves.tri.t=valves.mit.t = avOpen?1:0;
+  valves.pul.t=valves.aor.t = slOpen?1:0;
+}
+
+/* ---------- Highlight (Kammer-Umriss + markierte Schlüsselwörter) ---------- */
+function clearHiSec(){ Lhi.innerHTML=''; Lhi.setAttribute('opacity','0'); highlightLabels(null); }
+function highlightStep(s){
+  Lhi.innerHTML='';
+  // im Bild NUR die aktuelle Region gelb markieren
+  (s.hi||[]).forEach(id=>{ const src=document.getElementById(id); if(!src)return;
+    const c=src.cloneNode(true); c.removeAttribute('id'); c.removeAttribute('transform'); c.removeAttribute('clip-path'); c.setAttribute('fill','none');
+    c.setAttribute('stroke','#ffd84a'); c.setAttribute('stroke-width','9'); c.setAttribute('stroke-opacity','0.95'); c.setAttribute('filter','url(#soft)'); Lhi.appendChild(c); });
+  Lhi.setAttribute('opacity',1);
+  // außen die im Text fettgedruckten Begriffe in der Beschriftung hervorheben
+  highlightLabels(s.labels||[]);
+}
+
+/* ---------- Geführte Erklärung (Cardiac Cycle) ---------- */
+const TOUR=[
+ {title:'Sauerstoffarmes Blut kehrt zurück', step:'Schritt 1 / 6', dot:'#4a6aa8',
+  text:'Verbrauchtes, sauerstoffarmes Blut aus dem Körper fließt über die <b>obere und untere Hohlvene</b> in den <b>rechten Vorhof</b>.',
+  v:{tri:0,mit:0,pul:0,aor:0}, hi:['cavRA'], labels:['obere Hohlvene','untere Hohlvene','rechter Vorhof'], lvl:{ra:1,rv:0,la:0.3,lv:0}},
+ {title:'Füllung der rechten Kammer', step:'Schritt 2 / 6', dot:'#4a6aa8',
+  text:'Der rechte Vorhof zieht sich zusammen, die <b>Trikuspidalklappe öffnet sich</b>, und das Blut strömt in die <b>rechte Kammer</b>.',
+  v:{tri:1,mit:0,pul:0,aor:0}, hi:['cavRV'], labels:['Trikuspidalklappe','rechte Kammer'], lvl:{ra:0,rv:1,la:0.4,lv:0}},
+ {title:'Auswurf in die Lunge', step:'Schritt 3 / 6', dot:'#4a6aa8',
+  text:'Die rechte Kammer pumpt: die <b>Trikuspidalklappe schließt</b>, die <b>Pulmonalklappe öffnet</b>. Das Blut fließt über den <b>Lungenstamm</b> zur Lunge und nimmt dort Sauerstoff auf.',
+  v:{tri:0,mit:0,pul:1,aor:0}, hi:['rvot'], labels:['Trikuspidalklappe','Pulmonalklappe','Lungenstamm'], lvl:{ra:0.4,rv:0,la:0.6,lv:0}},
+ {title:'Sauerstoffreiches Blut aus der Lunge', step:'Schritt 4 / 6', dot:'#d23b4e',
+  text:'Frisch mit Sauerstoff beladenes Blut kommt über die <b>vier Lungenvenen</b> zurück und füllt den <b>linken Vorhof</b>.',
+  v:{tri:0,mit:0,pul:0,aor:0}, hi:['cavLA'], labels:['Lungenvenen','linker Vorhof'], lvl:{ra:0.7,rv:0,la:1,lv:0}},
+ {title:'Füllung der linken Kammer', step:'Schritt 5 / 6', dot:'#d23b4e',
+  text:'Der linke Vorhof zieht sich zusammen, die <b>Mitralklappe öffnet sich</b>, und das Blut strömt in die kräftige <b>linke Kammer</b>.',
+  v:{tri:0,mit:1,pul:0,aor:0}, hi:['cavLV'], labels:['Mitralklappe','linke Kammer'], lvl:{ra:0.9,rv:0,la:0,lv:1}},
+ {title:'Auswurf in den Körper', step:'Schritt 6 / 6', dot:'#d23b4e',
+  text:'Die linke Kammer pumpt mit hohem Druck: die <b>Mitralklappe schließt</b>, die <b>Aortenklappe öffnet</b>. Das Blut fließt über die <b>Aorta</b> in den ganzen Körper – der Kreislauf beginnt von vorn.',
+  v:{tri:0,mit:0,pul:0,aor:1}, hi:['lvot'], labels:['Mitralklappe','Aortenklappe','Aorta'], lvl:{ra:1,rv:0.3,la:0.3,lv:0}}
+];
+let tourActive=false, tourStep=0, tourPlay=false, tourTimer=0;
+const sideTitle=document.getElementById('sideTitle'),sideText=document.getElementById('sideText'),
+      sideStep=document.getElementById('sideStep'),sideDot=document.getElementById('sideDot'),
+      tourNav=document.getElementById('tourNav'),tourBadge=document.getElementById('tourBadge'),
+      valveBox=document.getElementById('valveBox'),startTourBtn=document.getElementById('startTour'),
+      endTourBtn=document.getElementById('endTour'),playBtn=document.getElementById('playBtn');
+let tourFlow=null; // aktive Segmente erzwingen
+function showStep(i){
+  tourStep=(i+TOUR.length)%TOUR.length; const s=TOUR[tourStep];
+  sideTitle.textContent=s.title; sideText.innerHTML=s.text; sideStep.textContent=s.step; sideDot.style.background=s.dot;
+  valves.tri.t=s.v.tri; valves.mit.t=s.v.mit; valves.pul.t=s.v.pul; valves.aor.t=s.v.aor;
+  highlightStep(s);
+  document.getElementById('prevBtn').disabled=false; document.getElementById('nextBtn').disabled=false;
+}
+function startTour(){ tourActive=true; beatOn=false; flowOn=true; syncTogs();
+  tourBadge.style.display='inline-flex'; tourNav.style.display='flex'; startTourBtn.style.display='none';
+  endTourBtn.style.display='block'; valveBox.innerHTML=''; Llabel.style.display=''; showStep(0); }
+function endTour(){ tourActive=false; tourPlay=false; playBtn.textContent='▶ Auto'; clearHiSec();
+  tourBadge.style.display='none'; tourNav.style.display='none'; startTourBtn.style.display='block'; endTourBtn.style.display='none';
+  beatOn=true; Llabel.style.display=labelsOn?'':'none'; syncTogs(); sideTitle.textContent='Querschnitt durch das Herz'; sideStep.textContent='';
+  sideDot.style.background='var(--rot)'; defaultSideText(); }
+function defaultSideText(){ sideText.innerHTML='Das Herz besteht aus vier Räumen: zwei Vorhöfen (oben) und zwei Kammern (unten). Vier Klappen sorgen dafür, dass das Blut nur in eine Richtung fließt.<br><br>Tipp: Schalte links den <b>Herzschlag aus</b> und klicke dann auf eine Klappe, um sie selbst zu öffnen oder zu schließen – und zu sehen, was passiert.'; }
+startTourBtn.onclick=startTour; endTourBtn.onclick=endTour;
+document.getElementById('nextBtn').onclick=()=>showStep(tourStep+1);
+document.getElementById('prevBtn').onclick=()=>showStep(tourStep-1);
+playBtn.onclick=function(){tourPlay=!tourPlay;this.textContent=tourPlay?'⏸ Pause':'▶ Auto';tourTimer=0;};
+
+/* ---------- Klappen anklickbar (wenn Herzschlag aus) ---------- */
+function valveClick(key){
+  if(beatOn||tourActive) return;
+  const v=valves[key]; v.t=v.f>0.5?0:1;
+  const open=v.t>0.5;
+  valveBox.innerHTML=`<div class="valveInfo"><b>${v.name}</b><br>${open?v.open:v.closed}</div>`;
+}
+[['vTri','tri'],['vMit','mit'],['vAor','aor'],['vPul','pul']].forEach(([cls,key])=>{
+  svg.querySelectorAll('.'+cls).forEach(node=>{ node.classList.add('clickable'); node.style.cursor='pointer';
+    node.addEventListener('click',()=>valveClick(key)); });
+});
+
+/* ---------- Toggles ---------- */
+const beatTog=document.getElementById('beatTog'),flowTog=document.getElementById('flowTog'),labelTog=document.getElementById('labelTog');
+let labelsOn=true;
+function syncTogs(){ beatTog.classList.toggle('off',!beatOn); flowTog.classList.toggle('off',!flowOn); labelTog.classList.toggle('off',!labelsOn);
+  beatTog.childNodes[1].nodeValue=beatOn?'❤ Herzschlag':'❤ Herzschlag (aus)';
+}
+beatTog.onclick=()=>{ if(tourActive)return; beatOn=!beatOn; if(beatOn){valveBox.innerHTML='';} else {
+   valveBox.innerHTML='<div class="valveInfo">Herzschlag pausiert. <b>Klicke eine Klappe an</b>, um sie zu öffnen/schließen.</div>'; } syncTogs(); };
+flowTog.onclick=()=>{ flowOn=!flowOn; syncTogs(); };
+labelTog.onclick=()=>{ labelsOn=!labelsOn; Llabel.style.display=labelsOn?'':'none'; syncTogs(); };
+const flowRange=document.getElementById('flowRange'), flowVal=document.getElementById('flowVal');
+flowRange.oninput=()=>{ const f=+flowRange.value/100; flowSpeed=0.12*f; flowVal.textContent=f.toFixed(1)+'×'; };
+syncTogs();
+
+/* ---------- 2D Animationsschleife ---------- */
+let lastT=performance.now();
+function loop2d(now){
+  if(!run2d){return;}
+  requestAnimationFrame(loop2d);
+  const dt=Math.min((now-lastT)/1000,0.05); lastT=now;
+
+  if(beatOn && !tourActive) freeCycle(dt);
+  // Auto-Abspielen der Tour
+  if(tourActive && tourPlay){ tourTimer+=dt; if(tourTimer>4.5){tourTimer=0; showStep(tourStep+1);} }
+
+  // Klappen weich zum Zielzustand bewegen
+  for(const k in valves){ const v=valves[k]; v.f+=(v.t-v.f)*Math.min(1,dt*6); }
+  applyValves();
+
+  // Füllstände / Kammergröße
+  if(flowOn){
+    let tRA,tRV,tLA,tLV;
+    if(tourActive){ const s=TOUR[tourStep].lvl; tRA=s.ra; tRV=s.rv; tLA=s.la; tLV=s.lv; }
+    else { tRA=tLA=atrLvl(phase); tRV=tLV=venLvl(phase); }
+    lerpLevel(chambers.RA,tRA,dt); lerpLevel(chambers.RV,tRV,dt);
+    lerpLevel(chambers.LA,tLA,dt); lerpLevel(chambers.LV,tLV,dt);
+  } else { // Blutfluss aus: Kammern voll; Herz darf weiter schlagen (Kontraktion)
+    ['RA','RV','LA','LV'].forEach(k=>{ const ch=chambers[k]; ch.level+=(1-ch.level)*Math.min(1,dt*7); applyLevel(ch);
+      const isV=(k==='RV'||k==='LV'); setChamberScale(ch, beatOn?beatScale(phase,isV):1); });
+  }
+  updateStreams(dt);
+}
+
+/* =========================================================
+   TEIL 2b — Beschriftung & Info der Außenansicht
+   ========================================================= */
+const P3=[
+  {key:'ra',name:'Rechter Vorhof',color:'#4a6aa8',anchor:[-0.66,0.98,0.25],mats:[ra.material],
+   info:'Der rechte Vorhof ist die „Sammelkammer" des sauerstoffarmen Blutes. Über die obere und untere Hohlvene strömt verbrauchtes Blut aus dem ganzen Körper hier zusammen. Zieht sich der Vorhof zusammen, öffnet sich die Trikuspidalklappe und das Blut fließt in die rechte Kammer. Im rechten Vorhof liegt auch der Sinusknoten – der natürliche Taktgeber des Herzens.',
+   fact:'Der Sinusknoten erzeugt die elektrischen Impulse für jeden Herzschlag – er ist der körpereigene „Schrittmacher".'},
+  {key:'rv',name:'Rechte Kammer',color:'#4a6aa8',anchor:[-0.55,-0.1,0.62],mats:[rv.material],
+   info:'Die rechte Kammer pumpt das sauerstoffarme Blut über den Lungenstamm in die Lunge (Lungenkreislauf). Weil dieser Weg kurz ist und nur geringen Druck braucht, ist ihre Muskelwand deutlich dünner als die der linken Kammer.',
+   fact:'Die rechte Kammer pumpt gegen einen viel niedrigeren Druck als die linke – ihre Wand ist nur etwa ein Drittel so dick.'},
+  {key:'la',name:'Linker Vorhof',color:'#d23b4e',anchor:[0.52,0.98,-0.2],mats:[la.material],
+   info:'Der linke Vorhof nimmt das frisch mit Sauerstoff beladene Blut aus den vier Lungenvenen auf. Bei seiner Kontraktion öffnet sich die Mitralklappe und füllt die linke Kammer mit den letzten ca. 20 % ihres Volumens („Vorhof-Kick").',
+   fact:'Der linke Vorhof ist der hinterste Teil des Herzens und liegt direkt vor der Speiseröhre.'},
+  {key:'lv',name:'Linke Kammer',color:'#d23b4e',anchor:[0.4,-0.35,0.45],mats:[lv.material],
+   info:'Die linke Kammer ist der stärkste und muskulöseste Teil des Herzens. Sie presst das sauerstoffreiche Blut mit hohem Druck über die Aorta in den gesamten Körperkreislauf. Ihre dicke Wand (Myokard) bildet die Herzspitze.',
+   fact:'Die linke Kammer baut einen Druck auf, der eine Blutfontäne über 1,5 m hoch spritzen lassen könnte.'},
+  {key:'aorta',name:'Aorta',color:'#d23b4e',anchor:[0.0,2.05,-0.1],mats:[aortaMat],
+   info:'Die Aorta ist die größte Schlagader des Körpers. Sie entspringt der linken Kammer; ihr Bogen gibt Äste zu Kopf und Armen ab und verteilt das sauerstoffreiche Blut über immer feinere Arterien in alle Organe.',
+   fact:'Durch die Aorta fließen in Ruhe etwa 5 Liter Blut pro Minute – bei starker Belastung bis zu 25–30 Liter. Ihr Durchmesser entspricht ungefähr einem Gartenschlauch (~2,5–3,5 cm).'},
+  {key:'pa',name:'Lungenstamm / Lungenarterien',color:'#4a6aa8',anchor:[-0.35,1.7,0.3],mats:[paMat],
+   info:'Der Lungenstamm führt sauerstoffarmes Blut von der rechten Kammer zur Lunge und teilt sich dort in die linke und rechte Lungenarterie. In der Lunge gibt das Blut CO₂ ab und nimmt Sauerstoff auf.',
+   fact:'Die Lungenarterien sind die einzigen Arterien des Körpers, die sauerstoffARMES Blut transportieren – bei den Venen ist es genau umgekehrt.'},
+  {key:'vc',name:'Obere & untere Hohlvene',color:'#4a6aa8',anchor:[-0.72,1.55,0.1],mats:[vcMat],
+   info:'Die obere Hohlvene sammelt das Blut aus Kopf, Hals und Armen, die untere aus dem restlichen Körper. Beide münden in den rechten Vorhof und schließen so den Körperkreislauf.',
+   fact:'Die untere Hohlvene ist die größte Vene des menschlichen Körpers.'},
+  {key:'pv',name:'Lungenvenen',color:'#d23b4e',anchor:[1.12,1.0,-0.55],mats:[pvMat],
+   info:'Die vier Lungenvenen bringen das in der Lunge mit Sauerstoff angereicherte Blut zum linken Vorhof zurück und beginnen so den Körperkreislauf.',
+   fact:'Die Lungenvenen sind die einzigen Venen, die sauerstoffREICHES Blut führen.'},
+  {key:'cor',name:'Herzkranzgefäße',color:'#d0402f',anchor:[0.05,-0.2,1.25],mats:cor.children.map(c=>c.material),
+   info:'Die Herzkranzgefäße (Koronararterien) bilden ein feines Netz auf der Herzoberfläche und versorgen den Herzmuskel selbst mit Sauerstoff. Sie entspringen direkt am Anfang der Aorta.',
+   fact:'Verschließt sich ein Herzkranzgefäß, entsteht ein Herzinfarkt – der betroffene Muskelteil wird nicht mehr versorgt.'}
+];
+const BULLETS={
+  ra:['Sammelt sauerstoffarmes Blut aus dem Körper','Empfängt es aus oberer & unterer Hohlvene','Beherbergt den Sinusknoten (Taktgeber)','Öffnet die Trikuspidalklappe zur Kammer','Pumpt das Blut in die rechte Kammer'],
+  rv:['Pumpt sauerstoffarmes Blut zur Lunge','Treibt den Lungenkreislauf an','Öffnet beim Auswurf die Pulmonalklappe','Hat eine dünnere Muskelwand als links','Arbeitet mit vergleichsweise niedrigem Druck'],
+  la:['Sammelt sauerstoffreiches Blut aus der Lunge','Empfängt es aus vier Lungenvenen','Öffnet die Mitralklappe zur Kammer','Füllt die linke Kammer („Vorhof-Kick")','Liegt als hinterster Teil am Herzen'],
+  lv:['Pumpt sauerstoffreiches Blut in den Körper','Treibt den Körperkreislauf an','Ist der stärkste Muskel des Herzens','Erzeugt den hohen arteriellen Blutdruck','Bildet die Herzspitze'],
+  aorta:['Größte Schlagader des Körpers','Transportiert sauerstoffreiches Blut','Versorgt über Äste alle Organe','Aortenklappe verhindert den Rückfluss','Federt den Druckstoß ab (Windkessel)'],
+  pa:['Führt das Blut von rechts zur Lunge','Teilt sich in linke & rechte Lungenarterie','Transportiert sauerstoffarmes Blut','Pulmonalklappe sichert die Flussrichtung','Zentraler Teil des Lungenkreislaufs'],
+  vc:['Führen das Blut zum Herzen zurück','Obere Hohlvene: Kopf, Hals & Arme','Untere Hohlvene: restlicher Körper','Münden in den rechten Vorhof','Transportieren sauerstoffarmes Blut'],
+  pv:['Bringen Blut aus der Lunge zurück','Vier Venen münden in den linken Vorhof','Transportieren sauerstoffreiches Blut','Einzige Venen mit O₂-reichem Blut','Leiten den Körperkreislauf ein'],
+  cor:['Versorgen den Herzmuskel selbst','Entspringen am Anfang der Aorta','Bilden ein Netz auf der Oberfläche','Liefern Sauerstoff & Nährstoffe','Verschluss führt zum Herzinfarkt']
+};
+// Mesh → Eintrag (für Klick im 3D)
+const meshToP3=new Map();
+[[ra,'ra'],[rv,'rv'],[la,'la'],[lv,'lv'],[aortaMesh,'aorta'],[paMesh,'pa'],[svcMesh,'vc'],[ivcMesh,'vc'],...pvMeshes.map(m=>[m,'pv']),...cor.children.map(c=>[c,'cor'])]
+  .forEach(([m,k])=>meshToP3.set(m,P3.find(p=>p.key===k)));
+const p3meshes=[ra,rv,la,lv,aortaMesh,paMesh,svcMesh,ivcMesh,...pvMeshes,...cor.children];
+
+// Pills erstellen
+const labels3dEl=document.getElementById('labels3d');
+P3.forEach(p=>{ const d=document.createElement('div'); d.className='lab3d'; d.textContent=p.name;
+  d.onclick=()=>selectP3(p); p.pill=d; labels3dEl.appendChild(d); });
+
+function updateLabels3d(){
+  for(const p of P3){ _pv.set(p.anchor[0],p.anchor[1],p.anchor[2]); heart.localToWorld(_pv); _pv.project(camera);
+    const onScreen=_pv.z<1;
+    if(!onScreen){ p.pill.style.display='none'; continue; }
+    p.pill.style.display='block';
+    p.pill.style.left=((_pv.x*0.5+0.5)*innerWidth)+'px';
+    p.pill.style.top=((-_pv.y*0.5+0.5)*innerHeight)+'px';
+  }
+}
+// Hervorhebung (Umriss-Effekt über Emissive-Glow)
+let selP3=null;
+function clearHi(){ if(!selP3)return; selP3.mats.forEach(m=>{ if(m.userData.oc!==undefined){
+    m.color.setHex(m.userData.oc); m.emissive.setHex(m.userData.oe); m.emissiveIntensity=m.userData.oei; } });
+  if(selP3.pill) selP3.pill.classList.remove('sel'); }
+function selectP3(p){
+  clearHi(); selP3=p;
+  // ausgewähltes Teil wird ORANGE hinterlegt (auch die blauen Gefäße)
+  p.mats.forEach(m=>{ if(m.userData.oc===undefined){m.userData.oc=m.color.getHex(); m.userData.oe=m.emissive.getHex(); m.userData.oei=m.emissiveIntensity;}
+    m.color.setHex(0xff8a2e); m.emissive.setHex(0x933f00); m.emissiveIntensity=0.6; });
+  if(p.pill) p.pill.classList.add('sel');
+  info3dTitle.textContent=p.name; info3dText.textContent=p.info; info3dDot.style.background=p.color;
+  info3dList.innerHTML=(BULLETS[p.key]||[]).map(b=>'<li>'+b+'</li>').join('');
+  info3dFact.innerHTML='💡 <b>Wusstest du?</b> '+p.fact;
+  sideInfo3d.classList.add('open');
+}
+const sideInfo3d=document.getElementById('sideInfo3d'), info3dTitle=document.getElementById('info3dTitle'),
+      info3dText=document.getElementById('info3dText'), info3dFact=document.getElementById('info3dFact'),
+      info3dList=document.getElementById('info3dList'), info3dDot=document.getElementById('info3dDot');
+document.getElementById('info3dClose').onclick=()=>{ sideInfo3d.classList.remove('open'); clearHi(); selP3=null; };
+
+const labels3dBtn=document.getElementById('labels3dBtn');
+function setLabels3d(on){ labelsOn3d=on; labels3dBtn.classList.toggle('off',!on);
+  labels3dEl.style.display=on?'block':'none'; if(on) updateLabels3d(); }
+labels3dBtn.onclick=()=>setLabels3d(!labelsOn3d);
+setLabels3d(false);
+
+// Klick auf 3D-Teil
+const ray3=new THREE.Raycaster(), ptr3=new THREE.Vector2(); let down3=null;
+renderer.domElement.addEventListener('pointerdown',e=>down3={x:e.clientX,y:e.clientY});
+renderer.domElement.addEventListener('pointerup',e=>{ if(mode!=='3d'||!down3)return;
+  const moved=Math.hypot(e.clientX-down3.x,e.clientY-down3.y); down3=null; if(moved>8)return;
+  ptr3.x=(e.clientX/innerWidth)*2-1; ptr3.y=-(e.clientY/innerHeight)*2+1; ray3.setFromCamera(ptr3,camera);
+  const hits=ray3.intersectObjects(p3meshes,false);
+  if(hits.length){ const p=meshToP3.get(hits[0].object); if(p) selectP3(p); } });
+
+/* =========================================================
+   TEIL 3 — Ansicht-Umschaltung
+   ========================================================= */
+const v3=document.getElementById('view3d'), vs=document.getElementById('viewSection'),
+      b3=document.getElementById('btn3d'), bs=document.getElementById('btnSec'),
+      sub=document.getElementById('subtitle'),
+      ctrl3dEl=document.getElementById('ctrl3d'), hint3dEl=document.getElementById('hint3d');
+
+// Frontaler Blickwinkel = Ausrichtung der Querschnittsansicht
+const FRONT={p:new THREE.Vector3(0,-0.05,5.0), t:new THREE.Vector3(0,-0.05,0)};
+let poseA={p:new THREE.Vector3(1.6,0.8,6.2), t:new THREE.Vector3(0,0,0)};
+function flyCam(toP,toT,dur,done){ camTween={fp:camera.position.clone(),tp:toP.clone(),ft:controls.target.clone(),tt:toT.clone(),e:0,dur,done}; }
+function chrome(){ const on=(mode==='3d'); ctrl3dEl.style.display=on?'flex':'none'; hint3dEl.style.display=on?'block':'none';
+  labels3dEl.style.display=(on&&labelsOn3d)?'block':'none';
+  if(!on){ sideInfo3d.classList.remove('open'); clearHi(); selP3=null; } }
+
+// ---- Außen → Querschnitt: erst Kamerafahrt zum Frontwinkel, dann Überblendung ----
+function goSection(){
+  if(mode!=='3d') return;
+  mode='t_in'; controls.enabled=false; chrome();
+  poseA={p:camera.position.clone(),t:controls.target.clone()};
+  bs.classList.add('active'); b3.classList.remove('active'); sub.textContent='Übergang …';
+  flyCam(FRONT.p,FRONT.t,1.2,()=>{
+    run2d=true; lastT=performance.now(); requestAnimationFrame(loop2d);
+    vs.style.display='block'; vs.style.opacity='0';
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{ vs.style.opacity='1'; }));
+    setTimeout(()=>{ run3d=false; v3.style.display='none'; mode='sec';
+      sub.textContent='Querschnitt – Klappen, Blutfluss & geführte Erklärung'; }, 650);
+  });
+}
+// ---- Querschnitt → Außen: ausblenden, dann zurück an die Ausgangsstelle fliegen ----
+function goOutside(){
+  if(mode!=='sec') return;
+  mode='t_out'; b3.classList.add('active'); bs.classList.remove('active'); sub.textContent='Übergang …';
+  camera.position.copy(FRONT.p); controls.target.copy(FRONT.t);
+  v3.style.display='block'; run3d=true; clock.getDelta(); requestAnimationFrame(loop3d);
+  vs.style.opacity='0';
+  setTimeout(()=>{
+    vs.style.display='none'; run2d=false;
+    flyCam(poseA.p,poseA.t,1.2,()=>{ controls.enabled=true; mode='3d'; chrome(); sub.textContent='Außenansicht – drehen & zoomen'; });
+  }, 600);
+}
+b3.onclick=goOutside; bs.onclick=goSection;
+
+document.getElementById('startBtn').onclick=()=>{ document.getElementById('intro').style.display='none';
+  mode='3d'; run3d=true; controls.enabled=true; v3.style.display='block'; vs.style.display='none';
+  chrome(); clock.getDelta(); requestAnimationFrame(loop3d); };
+</script>
+</body>
+</html>

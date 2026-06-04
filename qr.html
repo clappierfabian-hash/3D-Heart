@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>QR-Code für deine Herz-Website</title>
+<style>
+  body{ margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: radial-gradient(120% 120% at 50% 0%, #1a2138, #0b1020 60%, #05070f);
+    color:#eef2ff; padding:24px; }
+  .card{ background: rgba(16,22,40,.85); border:1px solid rgba(255,255,255,.16);
+    border-radius:18px; padding:28px; width:min(440px, 100%); text-align:center; }
+  h1{ font-size:20px; margin:0 0 6px; } p{ color:#aab3d0; font-size:13.5px; line-height:1.5; }
+  input{ width:100%; box-sizing:border-box; margin:14px 0; padding:12px 14px; border-radius:11px;
+    border:1px solid rgba(255,255,255,.2); background:#0d1326; color:#fff; font-size:14px; }
+  button{ appearance:none; border:none; cursor:pointer; font-weight:700; font-size:15px; color:#fff;
+    background: linear-gradient(135deg,#e2455a,#b5324a); padding:12px 22px; border-radius:12px; }
+  #qr{ margin:22px auto 0; width:260px; height:260px; background:#fff; border-radius:14px;
+    display:flex; align-items:center; justify-content:center; padding:12px; }
+  #qr img{ width:100%; height:100%; }
+  a.dl{ display:inline-block; margin-top:14px; color:#9fc0ff; font-size:13px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>📱 QR-Code erstellen</h1>
+    <p>Füge hier die Internet-Adresse deiner Herz-Website ein (z. B. <i>https://deinname.github.io/herz/</i>) und erzeuge den QR-Code zum Ausdrucken oder Teilen.</p>
+    <input id="url" type="text" placeholder="https://deinname.github.io/herz/" />
+    <button id="go">QR-Code erzeugen</button>
+    <div id="qr"><span style="color:#888;font-size:13px">QR-Code erscheint hier</span></div>
+    <a id="dl" class="dl" style="display:none" download="herz-qr.png">⬇ QR-Code als Bild herunterladen</a>
+  </div>
+<script>
+  const qrBox = document.getElementById('qr');
+  const dl = document.getElementById('dl');
+  function makeQR(){
+    let url = document.getElementById('url').value.trim();
+    if(!url){ qrBox.innerHTML = '<span style="color:#c33;font-size:13px">Bitte eine Adresse eingeben.</span>'; return; }
+    if(!/^https?:\/\//i.test(url)) url = 'https://' + url;
+    // QR über eine kostenlose API erzeugen (kein Konto nötig)
+    const api = 'https://api.qrserver.com/v1/create-qr-code/?size=500x500&margin=10&data=' + encodeURIComponent(url);
+    qrBox.innerHTML = '<img alt="QR-Code" src="' + api + '">';
+    dl.href = api; dl.style.display = 'inline-block';
+  }
+  document.getElementById('go').onclick = makeQR;
+  document.getElementById('url').addEventListener('keydown', e=>{ if(e.key==='Enter') makeQR(); });
+</script>
+</body>
+</html>
